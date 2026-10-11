@@ -9,4 +9,6 @@ export interface Job {
   type: string;
   payload: unknown;
   status: JobStatus;
+  attempts: number;
+  maxRetries: number;
 }

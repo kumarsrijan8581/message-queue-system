@@ -32,11 +32,12 @@ export class Worker {
       return;
     }
 
-    try {
-      job.status = "PROCESSING";
+    job.status = "PROCESSING";
+    job.attempts++;
 
+    try {
       console.log(
-        `${this.workerId}: Started ${job.id}, status: ${job.status}`
+        `${this.workerId}: Processing ${job.id}, attempt ${job.attempts}`
       );
 
       await handler.handle(job);
@@ -44,15 +45,28 @@ export class Worker {
       job.status = "COMPLETED";
 
       console.log(
-        `${this.workerId}: Finished ${job.id}, status: ${job.status}`
+        `${this.workerId}: ${job.id} completed successfully`
       );
     } catch (error) {
-      job.status = "FAILED";
-
       console.error(
-        `${this.workerId}: Job ${job.id} failed, status: ${job.status}`,
-        error
+        `${this.workerId}: ${job.id} failed on attempt ${job.attempts}`
       );
+
+      if (job.attempts <= job.maxRetries) {
+        job.status = "PENDING";
+
+        console.log(
+          `${this.workerId}: Retrying ${job.id}`
+        );
+
+        this.queue.enqueue(job);
+      } else {
+        job.status = "FAILED";
+
+        console.log(
+          `${this.workerId}: ${job.id} exhausted all retries`
+        );
+      }
     }
   }
 
