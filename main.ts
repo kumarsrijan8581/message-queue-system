@@ -20,26 +20,42 @@ async function main(): Promise<void> {
       id: "job-1",
       type: "GENERATE_INVOICE",
       payload: { orderId: "ORD-500" },
+      status: "PENDING",
     },
     {
       id: "job-2",
       type: "SEND_EMAIL",
       payload: { email: "user@example.com" },
+      status: "PENDING",
     },
     {
       id: "job-3",
       type: "SEND_EMAIL",
       payload: { email: "mate@example.com" },
+      status: "PENDING",
     },
     {
       id: "job-4",
       type: "GENERATE_INVOICE",
       payload: { orderId: "ORD-501" },
+      status: "PENDING",
     },
+    {
+        id: "job-5",
+        type: "SEND_EMAIL",
+        payload: { email: "fail@example.com" },
+        status: "PENDING",
+      },
   ];
 
   for (const job of jobs) {
     queue.enqueue(job);
+  }
+
+  console.log("Initial job statuses:");
+
+  for (const job of jobs) {
+    console.log(`${job.id}: ${job.status}`);
   }
 
   await Promise.all([
@@ -47,7 +63,11 @@ async function main(): Promise<void> {
     worker2.runUntilEmpty(),
   ]);
 
-  console.log("All jobs processed");
+  console.log("\nFinal job statuses:");
+
+  for (const job of jobs) {
+    console.log(`${job.id}: ${job.status}`);
+  }
 }
 
 main().catch(console.error);

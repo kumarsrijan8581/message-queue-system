@@ -25,20 +25,34 @@ export class Worker {
     const handler = this.handlerMap.get(job.type);
 
     if (!handler) {
+      job.status = "FAILED";
       console.log(
-        `${this.workerId}: No handler for ${job.type}`
+        `${this.workerId}: No handler found for ${job.type}`
       );
       return;
     }
 
     try {
-      console.log(`${this.workerId}: Started ${job.id}`);
+      job.status = "PROCESSING";
+
+      console.log(
+        `${this.workerId}: Started ${job.id}, status: ${job.status}`
+      );
 
       await handler.handle(job);
 
-      console.log(`${this.workerId}: Finished ${job.id}`);
+      job.status = "COMPLETED";
+
+      console.log(
+        `${this.workerId}: Finished ${job.id}, status: ${job.status}`
+      );
     } catch (error) {
-      console.error(`${this.workerId}: Job ${job.id} failed`, error);
+      job.status = "FAILED";
+
+      console.error(
+        `${this.workerId}: Job ${job.id} failed, status: ${job.status}`,
+        error
+      );
     }
   }
 
