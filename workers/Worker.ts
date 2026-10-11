@@ -1,12 +1,14 @@
 import { Job } from "../models/Job";
 import { Queue } from "../interfaces/Queue";
 import { JobHandler } from "../interfaces/JobHandler";
+import { DeadLetterQueue } from "../queue/DeadLetterQueue";
 
 export class Worker {
   private handlerMap: Map<string, JobHandler>;
 
   constructor(
     private queue: Queue<Job>,
+    private deadLetterQueue: DeadLetterQueue,
     private workerId: string,
     handlers: JobHandler[]
   ) {
@@ -26,8 +28,10 @@ export class Worker {
 
     if (!handler) {
       job.status = "FAILED";
+      this.deadLetterQueue.add(job);
+
       console.log(
-        `${this.workerId}: No handler found for ${job.type}`
+        `${this.workerId}: No handler for ${job.type}; moved ${job.id} to DLQ`
       );
       return;
     }
@@ -44,27 +48,24 @@ export class Worker {
 
       job.status = "COMPLETED";
 
-      console.log(
-        `${this.workerId}: ${job.id} completed successfully`
-      );
+      console.log(`${this.workerId}: ${job.id} completed successfully`);
     } catch (error) {
       console.error(
-        `${this.workerId}: ${job.id} failed on attempt ${job.attempts}`
+        `${this.workerId}: ${job.id} failed on attempt ${job.attempts}`,
+        error
       );
 
       if (job.attempts <= job.maxRetries) {
         job.status = "PENDING";
 
-        console.log(
-          `${this.workerId}: Retrying ${job.id}`
-        );
-
+        console.log(`${this.workerId}: Retrying ${job.id}`);
         this.queue.enqueue(job);
       } else {
         job.status = "FAILED";
+        this.deadLetterQueue.add(job);
 
         console.log(
-          `${this.workerId}: ${job.id} exhausted all retries`
+          `${this.workerId}: ${job.id} exhausted retries and moved to DLQ`
         );
       }
     }
