@@ -1,4 +1,3 @@
-
 import { Job } from "../models/Job";
 import { Queue } from "../interfaces/Queue";
 import { JobHandler } from "../interfaces/JobHandler";
@@ -8,6 +7,7 @@ export class Worker {
 
   constructor(
     private queue: Queue<Job>,
+    private workerId: string,
     handlers: JobHandler[]
   ) {
     this.handlerMap = new Map(
@@ -19,24 +19,32 @@ export class Worker {
     const job = this.queue.dequeue();
 
     if (!job) {
-      console.log("No jobs available");
       return;
     }
 
     const handler = this.handlerMap.get(job.type);
 
     if (!handler) {
-      console.log(`No handler found for job type: ${job.type}`);
+      console.log(
+        `${this.workerId}: No handler for ${job.type}`
+      );
       return;
     }
 
     try {
-      console.log(`Worker processing job: ${job.id}`);
+      console.log(`${this.workerId}: Started ${job.id}`);
 
       await handler.handle(job);
 
+      console.log(`${this.workerId}: Finished ${job.id}`);
     } catch (error) {
-      console.error(`Job ${job.id} failed:`, error);
+      console.error(`${this.workerId}: Job ${job.id} failed`, error);
+    }
+  }
+
+  async runUntilEmpty(): Promise<void> {
+    while (this.queue.size() > 0) {
+      await this.processNextJob();
     }
   }
 }
